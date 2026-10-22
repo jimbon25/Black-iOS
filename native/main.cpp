@@ -40,7 +40,6 @@ namespace {
 SDL_Window* g_window = nullptr;
 std::atomic<bool> g_foreground{true};
 std::atomic<uint32_t> g_surface_epoch{0};
-std::atomic<uint32_t> g_resume_epoch{0};
 std::mutex g_foreground_lock;
 std::condition_variable g_foreground_cv;
 
@@ -78,17 +77,28 @@ std::string Property(const char* name) {
 #endif
 
 void SetForeground(bool on) {
-    {
-        std::lock_guard lock(g_foreground_lock);
+    if (!on) {
+        {
+            std::lock_guard lock(g_foreground_lock);
+            g_foreground.store(false, std::memory_order_release);
+        }
+        // App is losing active focus (Control Center, Notification Center, or switching to background).
+        // Wait for any GPU work currently being processed to complete cleanly before iOS halts execution.
+        // On iOS, submitting Metal command buffers while in background causes MTLCommandBufferErrorNotPermitted,
+        // which destroys the Vulkan physical device permanently.
+        gpu::WaitIdle();
+        LOGI("app: in the background (gpu idle)");
+    } else {
+        {
+            std::lock_guard lock(g_foreground_lock);
 #ifdef __ANDROID__
-        if (on && !g_foreground) g_surface_epoch++;
-#else
-        if (on && !g_foreground) g_resume_epoch++;
+            if (!g_foreground) g_surface_epoch++;
 #endif
-        g_foreground = on;
+            g_foreground.store(true, std::memory_order_release);
+        }
+        g_foreground_cv.notify_all();
+        LOGI("app: in front");
     }
-    g_foreground_cv.notify_all();
-    LOGI("app: %s", on ? "in front" : "in the background");
 }
 
 // SDL's display mode in landscape: the window is not up yet when the settings load
@@ -115,13 +125,13 @@ float RefreshRate() {
 namespace host {
 
 SDL_Window* Window() { return g_window; }
-bool Foreground() { return g_foreground; }
+bool Foreground() { return g_foreground.load(std::memory_order_acquire); }
 uint32_t SurfaceEpoch() { return g_surface_epoch; }
-uint32_t ResumeEpoch() { return g_resume_epoch; }
 
 void WaitForeground() {
+    if (g_foreground.load(std::memory_order_acquire)) return;
     std::unique_lock lock(g_foreground_lock);
-    g_foreground_cv.wait(lock, [] { return g_foreground.load(); });
+    g_foreground_cv.wait(lock, [] { return g_foreground.load(std::memory_order_acquire); });
 }
 
 void WindowPixels(int& w, int& h) {

@@ -1042,6 +1042,7 @@ private:
     uint64_t Completed();
     VkFence SubmitFence(uint64_t value);
     void PollFences();
+    void WaitIdle() { if (dev_) vkDeviceWaitIdle(dev_); }
     void ResetFrame(Frame& f);
     void Transition(Image& im, VkImageLayout to);
     void BeginRender(Image* color, Image* depth);
@@ -1104,7 +1105,6 @@ private:
     VkInstance instance_ = VK_NULL_HANDLE;
     VkSurfaceKHR surface_ = VK_NULL_HANDLE;
     uint32_t surface_epoch_ = 0;
-    uint32_t resume_epoch_ = 0;
     VkPhysicalDevice pd_ = VK_NULL_HANDLE;
     VkPhysicalDeviceProperties props_{};
     VkPhysicalDeviceFeatures feats_{};
@@ -1482,6 +1482,11 @@ bool VulkanBackend::CreateSwapchain() {
     // the window's own size, landscape; Android's compositor turns the picture with the screen
     int w, h;
     host::WindowPixels(w, h);
+    if (w <= 0 || h <= 0) {
+        app::Mode mode = app::Desktop();
+        w = int(mode.width);
+        h = int(mode.height);
+    }
     if (w <= 0 || h <= 0) {
         w = int(caps.currentExtent.width);
         h = int(caps.currentExtent.height);
@@ -1886,6 +1891,7 @@ void VulkanBackend::ResetFrame(Frame& f) {
 
 // present: the frame's last commands, waiting on the acquired image and signalling its present semaphore
 void VulkanBackend::Submit(bool wait, bool present) {
+    host::WaitForeground();
     EndRender();
     Frame& f = CurrentFrame();
     vkEndCommandBuffer(f.cb);
@@ -3124,10 +3130,6 @@ void VulkanBackend::RecordLate(uint32_t data) {
 // window is new, lost, or could not be made last time. false: nothing to show on, the frame is dropped
 bool VulkanBackend::AcquireImage(uint32_t& index) {
     if (!host::Foreground()) return false;
-    if (resume_epoch_ != host::ResumeEpoch()) {
-        resume_epoch_ = host::ResumeEpoch();
-        swap_stale_ = true;
-    }
     if (!surface_ || surface_lost_ || host::SurfaceEpoch() != surface_epoch_) {
         if (surface_) LOGI("vulkan: new surface (%s)", surface_lost_ ? "lost" : "new window");
         DestroySwapchain();
@@ -3138,6 +3140,11 @@ bool VulkanBackend::AcquireImage(uint32_t& index) {
     }
     int w, h;
     host::WindowPixels(w, h);
+    if (w <= 0 || h <= 0) {
+        app::Mode mode = app::Desktop();
+        w = int(mode.width);
+        h = int(mode.height);
+    }
     if (!swap_ || swap_stale_ || uint32_t(w) != swap_extent_.width || uint32_t(h) != swap_extent_.height ||
         app::Get().vsync != vsync_) {
         if (!CreateSwapchain()) return false;
@@ -3332,6 +3339,7 @@ void VulkanBackend::SavePipelineCache() {
 }
 
 void VulkanBackend::Present(const Surface& front) {
+    host::WaitForeground();
     Target* t = EnsureTarget(front, false);
     if (t && LatchCpuWrite(*t)) UploadTarget(*t, front);
     if (ramp_dirty_) UploadGammaRamp();
@@ -3389,6 +3397,10 @@ std::unique_ptr<Backend> CreateBackend() {
 
 void WaitGpuFrame(uint64_t n) {
     if (g_vulkan) g_vulkan->WaitGpuFrame(n);
+}
+
+void WaitIdle() {
+    if (g_vulkan) g_vulkan->WaitIdle();
 }
 
 }  // namespace gpu

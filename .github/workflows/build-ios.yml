@@ -87,7 +87,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             NAME="${GITHUB_REF_NAME#v}"
           else
-            NAME="1.5.0-${GITHUB_SHA::7}"
+            NAME="1.5.3-${GITHUB_SHA::7}"
           fi
           echo "version=$NAME" >> "$GITHUB_OUTPUT"
           
@@ -97,6 +97,8 @@ jobs:
           mkdir -p build-ios/Payload
           cp -r build-ios/Release-iphoneos/Black.app build-ios/Payload/
           cp native/ios/icons/*.png build-ios/Payload/Black.app/ || true
+          plutil -replace CFBundleShortVersionString -string "$NAME" build-ios/Payload/Black.app/Info.plist || true
+          plutil -replace CFBundleVersion -string "$NAME" build-ios/Payload/Black.app/Info.plist || true
           cd build-ios && zip -r -9 "$IPA_NAME" Payload/
           echo "Created $IPA_NAME ($(stat -f %z "$IPA_NAME") bytes)"
 

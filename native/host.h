@@ -16,14 +16,16 @@ SDL_Window* Window();
 bool Foreground();
 // counts the native windows Android gave the app: the renderer makes its surface again when this changes
 uint32_t SurfaceEpoch();
-// counts times the app returned to foreground: on iOS renderer recreates swapchain without destroying surface
-uint32_t ResumeEpoch();
 // the game thread, before a present: returns once the app is in front again
 void WaitForeground();
 // the window's size in pixels
 void WindowPixels(int& w, int& h);
 
 }  // namespace host
+
+namespace gpu {
+void WaitIdle();
+}
 
 // controllers through SDL (input.cpp): the main thread hands over their plug events
 namespace input {
