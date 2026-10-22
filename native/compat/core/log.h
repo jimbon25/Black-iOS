@@ -22,3 +22,9 @@ inline constexpr bool kVerbose = true;
 #define LOGW(...) ::logx::Write(::logx::Level::Warn, __VA_ARGS__)
 #define LOGE(...) ::logx::Write(::logx::Level::Error, __VA_ARGS__)
 #define LOGR(...) ::logx::Write(::logx::Level::Report, __VA_ARGS__)
+
+#define LOG_FIRST(n, ...)                                                         \
+    do {                                                                          \
+        static std::atomic<int> _c{0};                                            \
+        if (_c.fetch_add(1, std::memory_order_relaxed) < (n)) LOGI(__VA_ARGS__); \
+    } while (0)
