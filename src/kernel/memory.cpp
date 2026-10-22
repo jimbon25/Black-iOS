@@ -1,6 +1,7 @@
 #include "kernel/memory.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -15,6 +16,7 @@
 #include <mach/mach.h>
 #include <mach/vm_map.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #else
 #include <sys/mman.h>
 #endif
@@ -115,6 +117,18 @@ bool Commit(uint32_t va, uint32_t size) {
         LOGE("memory: commit %08X+%X failed", first, uint32_t(end - first));
         return false;
     }
+#elif defined(__APPLE__)
+    static const size_t sys_page = []() {
+        long p = sysconf(_SC_PAGESIZE);
+        return p > 0 ? size_t(p) : 16384;
+    }();
+    uintptr_t addr = reinterpret_cast<uintptr_t>(g_base + first);
+    uintptr_t aligned_start = addr & ~(sys_page - 1);
+    uintptr_t aligned_end = (reinterpret_cast<uintptr_t>(g_base + end) + sys_page - 1) & ~(sys_page - 1);
+    if (mprotect(reinterpret_cast<void*>(aligned_start), aligned_end - aligned_start, PROT_READ | PROT_WRITE)) {
+        LOGE("memory: commit %08X+%X failed (errno %d)", first, uint32_t(end - first), errno);
+        return false;
+    }
 #else
     if (mprotect(g_base + first, size_t(end - first), PROT_READ | PROT_WRITE)) {
         LOGE("memory: commit %08X+%X failed", first, uint32_t(end - first));
@@ -132,6 +146,29 @@ void Decommit(uint32_t va, uint32_t size) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
 #ifdef _WIN32
     VirtualFree(g_base + first, size_t(end - first), MEM_DECOMMIT);
+#elif defined(__APPLE__)
+    static const size_t sys_page = []() {
+        long p = sysconf(_SC_PAGESIZE);
+        return p > 0 ? size_t(p) : 16384;
+    }();
+    for (uint64_t p = first; p < end; p += kPage) g_committed[size_t(p >> 12)] = 0;
+    uintptr_t hw_first = reinterpret_cast<uintptr_t>(g_base + first) & ~(sys_page - 1);
+    uintptr_t hw_last = (reinterpret_cast<uintptr_t>(g_base + end) + sys_page - 1) & ~(sys_page - 1);
+    for (uintptr_t hw = hw_first; hw < hw_last; hw += sys_page) {
+        uint32_t va_block = uint32_t(hw - reinterpret_cast<uintptr_t>(g_base));
+        bool any_committed = false;
+        for (uint32_t sub = 0; sub < sys_page; sub += kPage) {
+            if (g_committed[(va_block + sub) >> 12]) {
+                any_committed = true;
+                break;
+            }
+        }
+        if (!any_committed) {
+            madvise(reinterpret_cast<void*>(hw), sys_page, MADV_DONTNEED);
+            mprotect(reinterpret_cast<void*>(hw), sys_page, PROT_NONE);
+        }
+    }
+    return;
 #else
     madvise(g_base + first, size_t(end - first), MADV_DONTNEED);
     mprotect(g_base + first, size_t(end - first), PROT_NONE);

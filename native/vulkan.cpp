@@ -1214,16 +1214,39 @@ bool VulkanBackend::Init(uint32_t width, uint32_t height) {
     return true;
 }
 
+bool HasExtension(const std::vector<VkExtensionProperties>& list, const char* name) {
+    return std::any_of(list.begin(), list.end(), [&](const VkExtensionProperties& e) { return !std::strcmp(e.extensionName, name); });
+}
+
 bool VulkanBackend::CreateInstance() {
+    uint32_t inst_ext_count = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, nullptr);
+    std::vector<VkExtensionProperties> inst_exts(inst_ext_count);
+    if (inst_ext_count > 0) {
+        vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, inst_exts.data());
+    }
+
     uint32_t n = 0;
     const char* const* sdl = SDL_Vulkan_GetInstanceExtensions(&n);
-    std::vector<const char*> exts(sdl, sdl + n);
+    std::vector<const char*> exts;
+    for (uint32_t i = 0; i < n; i++) {
+        if (HasExtension(inst_exts, sdl[i])) {
+            exts.push_back(sdl[i]);
+        } else {
+            LOGI("vulkan: instance extension %s not in MoltenVK, skipping", sdl[i]);
+        }
+    }
+
     uint32_t loader = VK_API_VERSION_1_1;
     vkEnumerateInstanceVersion(&loader);
     VkApplicationInfo ai{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     ai.pApplicationName = app::kGame.log;
     ai.pEngineName = "XboxXBE-Recomp";
     ai.apiVersion = std::min<uint32_t>(loader, VK_API_VERSION_1_3);
+
+    VkInstanceCreateInfo ci{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+    ci.pApplicationInfo = &ai;
+
 #if defined(__APPLE__)
     #ifndef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
     #define VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME "VK_KHR_portability_enumeration"
@@ -1231,13 +1254,12 @@ bool VulkanBackend::CreateInstance() {
     #ifndef VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
     #define VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR 0x00000001
     #endif
-    exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    if (HasExtension(inst_exts, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+        exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        ci.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
 #endif
-    VkInstanceCreateInfo ci{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
-    ci.pApplicationInfo = &ai;
-#if defined(__APPLE__)
-    ci.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-#endif
+
     ci.enabledExtensionCount = uint32_t(exts.size());
     ci.ppEnabledExtensionNames = exts.data();
     VK_CHECK(vkCreateInstance(&ci, nullptr, &instance_));
@@ -1266,10 +1288,6 @@ bool VulkanBackend::CreateSurface() {
     surface_epoch_ = epoch;
     surface_lost_ = false;
     return true;
-}
-
-bool HasExtension(const std::vector<VkExtensionProperties>& list, const char* name) {
-    return std::any_of(list.begin(), list.end(), [&](const VkExtensionProperties& e) { return !std::strcmp(e.extensionName, name); });
 }
 
 bool VulkanBackend::PickDevice() {
