@@ -224,12 +224,16 @@ void CheckImage(const kernel::Disc& disc, const fs::path& iso) {
 void WaitForGame() {
     static bool logged = false;
     if (!logged) {
+#ifdef __ANDROID__
         std::error_code ec;
         fs::is_directory(kShared, ec);
         std::string cards;
         for (const fs::path& card : RemovableFolders()) cards += ", " + card.string();
         LOGE("game: no game files in %s%s or %s%s, waiting for them", kShared, cards.c_str(),
              (ExeDir() / "assets").c_str(), ec == std::errc::permission_denied ? ", no access to the first" : "");
+#elif defined(__APPLE__)
+        LOGE("game: no game files found in Documents/Black or assets, waiting for them at %s", ExeDir().c_str());
+#endif
         logged = true;
     }
     for (int i = 0; i < 10; i++) {
