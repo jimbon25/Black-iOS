@@ -13,4 +13,9 @@ inline int memfd_create(const char* name, unsigned int flags) { return int(sysca
 #if defined(__APPLE__)
 #include <pthread.h>
 #define pthread_setname_np(thread, name) pthread_setname_np(name)
+static inline int safe_pthread_attr_setstacksize(pthread_attr_t* attr, size_t size) {
+    if (size > (8u << 20)) size = (8u << 20);
+    return pthread_attr_setstacksize(attr, size);
+}
+#define pthread_attr_setstacksize(attr, size) safe_pthread_attr_setstacksize(attr, size)
 #endif

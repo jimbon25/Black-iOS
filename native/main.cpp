@@ -367,9 +367,26 @@ void Dispatch(const SDL_Event& e) {
     ui::OnEvent(e);
 }
 
+#include <csignal>
+
+static void CrashHandler(int sig, siginfo_t* info, void*) {
+    LOGE("CRASH: caught signal %d at %p", sig, info ? info->si_addr : nullptr);
+    logx::Flush();
+    _Exit(128 + sig);
+}
+
 }  // namespace
 
 int main(int, char**) {
+    struct sigaction sa{};
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = CrashHandler;
+    sigaction(SIGSEGV, &sa, nullptr);
+    sigaction(SIGBUS, &sa, nullptr);
+    sigaction(SIGABRT, &sa, nullptr);
+    sigaction(SIGILL, &sa, nullptr);
+    sigaction(SIGFPE, &sa, nullptr);
+
     LogToLogcat();
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
@@ -401,14 +418,19 @@ int main(int, char**) {
         return 1;
     }
 
+    LOGI("app: FindGame completed, initializing UI");
     InitUi();
+    LOGI("app: InitUi completed, initializing input");
     input::Init();
     if (app::kGame.window) app::kGame.window(g_window);
+    LOGI("app: booting kernel with xbe");
     if (!kernel::Boot(std::move(game.xbe), IMAGE_XBE, game.dir.string(), (app::ExeDir() / "hdd").string())) {
+        LOGE("app: kernel::Boot failed");
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, Utf8(app::kGame.short_title).c_str(),
                                  "The game failed to start, see the log in the logs folder.", g_window);
         return 1;
     }
+    LOGI("app: kernel::Boot succeeded, entering event loop");
 
     for (;;) {
         SDL_Event e;
