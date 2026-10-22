@@ -7,6 +7,7 @@ entry = 0x25A3F
 xdk = 5849
 out = "generated/game"
 partitions = 64
+library = "Black.dll"
 code_sections = [".text", "DSOUND", "WMADEC", "XMV", "XGRPH", "D3D", "XPP"]
 
 # extra entry points
