@@ -1,104 +1,96 @@
-# Black for Android
-An unofficial native Android port of the original Xbox version of *Black*, with touch controls, gyroscope aiming, controller support and extended graphics options.
+# Black for iOS & Android
+An unofficial native iOS and Android port of the original Xbox version of *Black (2006)*, featuring native ahead-of-time static recompilation, touch controls, gyroscope aiming, controller support, and extended graphics settings. No emulator or JIT compilation is required.
 
-The game's x86 code is statically recompiled ahead of time to C++ with [XboxXBE-Recomp](https://github.com/TGP482/XboxXBE-Recomp), then built for arm64. Drawing goes through Vulkan, and windowing, input and audio through SDL3. No emulator is involved.
+The game's x86 machine code is statically recompiled ahead of time to C++ with [XboxXBE-Recomp](https://github.com/TGP482/XboxXBE-Recomp), then natively compiled for ARM64. Rendering is powered by Vulkan (translated to Metal via MoltenVK on iOS), while windowing, audio, and input are handled by SDL3.
 
 > [!NOTE]
-> This project does not include any game assets. You must provide the files from your own legally acquired copy of the game to install or build.
+> This project does not distribute any copyrighted game assets. You must supply your own copy of the original Xbox game files.
 
-<p align="center">
-  <a href="https://youtu.be/x5bczwTuyhw">
-    <img src="https://img.youtube.com/vi/x5bczwTuyhw/maxresdefault.jpg" alt="Black Android gameplay on POCO F6" width="720">
-  </a>
-  <br>
-  <sub>▶ Gameplay on POCO F6, max settings + gyro aim</sub>
-</p>
+---
 
-## Installation
-1. Install the APK.
-2. Open **Black Android** and allow **all files access** when it asks (on Android 10, the **storage** permission).
-3. Copy the game into `/storage/emulated/0/Black`, or into a `Black` folder at the top of your SD card: the USA or Europe release, either as a disc image (`.iso`) or as `default.xbe` with its data folders. The app creates the folder on the phone's storage once access is allowed, and starts the game as soon as it finds the files.
+## iOS Installation Guide
 
-If you don't grant that access, `Android/data/com.racas.black/files/assets` works too.
+### 1. Download & Sideload IPA
+1. Download the latest `Black-*.ipa` from [GitHub Releases](https://github.com/jimbon25/Black-iOS/releases).
+2. Sideload the IPA onto your iOS device using your preferred tool:
+   - **KSign** / **ESign** (on-device signing)
+   - **TrollStore** (iOS 14.0 – 17.0)
+   - **AltStore** / **SideStore** / **Sideloadly**
 
-Settings (`black.toml`, `android.toml`, `layout.toml`), saves (`hdd`), logs and the shader cache are stored in `Android/data/com.racas.black/files`.
+### 2. Game Data Setup
+The recompiler specifically targets the **original Microsoft Xbox** release of *Black* (do **not** use PlayStation 2 ISOs).
+
+1. Download the HDD-ready Xbox game data:
+   - Direct download: [Archive.org HDDReady Xbox Black.zip (1.25 GB)](https://dn711309.ca.archive.org/0/items/HDDReadyXboxGames/Black.zip)
+   - Repository: [Archive.org HDDReadyXboxGames Collection](https://archive.org/details/HDDReadyXboxGames)
+2. Extract the archive on your device or computer. You will have a folder containing `default.xbe` along with game subfolders (`assets/`, `levels/`, etc.).
+3. Open the iOS **Files** app:
+   - Navigate to **On My iPhone** → **BLACK** (this folder is automatically exposed via iTunes Document Sharing).
+   - Place the extracted `Black` folder (or copy `default.xbe` and its folders) directly into this directory:
+     ```
+     On My iPhone/
+     └── BLACK/
+         └── Black/
+             ├── default.xbe
+             ├── assets/
+             ├── levels/
+             └── sound/
+     ```
+4. Open the game. It will automatically detect `default.xbe`, initialize the shaders, and launch.
+
+---
 
 ## Features
-The settings are in the game's own options menu, each page under its own button: **Graphics**, **Touch Controls**, **General**, **Mouse and Keyboard** and **Cheats**. Within a page the settings are grouped under headings, and arrows above and below the list show there is more to scroll to; tap them to move the list one row. In the pause menu, the *Page* row switches between the pages. Android's back button opens the pause menu.
 
-### Graphics
-- **Display**
-  - **Render Resolution**: 20% to 200% of the screen's height (67% by default), instead of the original 640x480.
-  - **Field of View**: horizontal FOV from 45 to 140 degrees during gameplay. The game's default is 70.
-  - **Viewmodel Field of View**: FOV of the first-person weapon and arms.
-  - **FMV Scale**: *Fill* zooms the 4:3 videos to fill the screen; *4:3* keeps their original aspect ratio.
-- **Performance**
-  - **V-Sync**, off by default.
-  - **Max Frame Rate**: unlimited by default, or capped at the display's refresh rate or a custom value. This replaces the Xbox's 30 FPS limit.
-  - **FPS Counter**.
-- **Quality**
-  - **Anisotropic Filtering**, applied to all textures.
-  - **Draw Distance**: 2x, 4x or 8x the game's level of detail and draw distances.
-  - **Reload Blur**: turns the blur while reloading on or off.
+### Graphics & Display
+- **Full-Screen Native Resolution**: Native edge-to-edge Retina display scaling.
+- **Render Resolution**: Configurable from 20% to 200% scaling for crisp high-resolution visuals.
+- **Field of View (FOV)**: Adjustable horizontal FOV (45° to 140°) and separate viewmodel weapon FOV.
+- **FMV Scaling**: Option to scale 4:3 video cinematics to *Fill* or preserve original aspect ratio.
+- **Post-Processing Filters**: Sharpen, vibrant color profiles, and vintage CRT scanline filters.
+- **Unlocked Performance**: Configurable frame rate limits or unlimited FPS at display refresh rate (60 Hz / 120 Hz ProMotion).
 
-### Touch Controls
-- **Touch**: the left side of the screen is a movement stick, and dragging on the right turns the view. On-screen buttons cover fire, aim, reload, use, melee, grenades, crouch, weapon switching and the suppressor. Dragging from a fire button turns the view while firing. The controls hide over loading screens and cutscenes.
-- **Menus**: a D-pad and a back button move through the menus and the options; tap an arrow to step one row, or hold it to keep going.
-- **Touch Sensitivity**: how fast a drag turns the view, separate from the mouse's sensitivity.
-- **Controls Layout**: pick a preset (*Default*, *3 Finger* or *4 Finger*) and set the controls' opacity and overall size.
-- **Edit Controls Position**: drag each control where you want it. To resize one, select it and tap **−** or **+**, or pinch it with a second finger.
-- **Motion Controls**: aim with the gyroscope by turning the phone, or a DualShock 4 or DualSense on Android 12 and newer, either always or only while firing, with adjustable sensitivity. The controller's gyroscope is used while you play with the controller, the phone's while you use the touch screen.
+### Controls & Input
+- **On-Screen Touch Controls**: Virtual analog stick, dynamic look drag, dedicated buttons for fire, aim, melee, reload, grenades, crouch, weapon swap, and suppressor.
+- **Customizable Layouts**: Built-in presets (*Default*, *3-Finger*, *4-Finger*) with repositioning and opacity adjustments.
+- **Motion & Gyro Aiming**: Gyroscope aiming with customizable sensitivity.
+- **Game Controller Support**: Full support for PlayStation (DualSense / DualShock), Xbox Wireless, and MFi controllers via SDL3 with vibration / haptic rumble.
 
-### Other Input
-- **Controller**: any controller SDL3 supports, with rumble. The touch buttons hide while a controller is in use. Controllers that some phones pass on as a virtual device (a DualShock 4 on MIUI, for example) work too.
-  - **Stick Deadzone and Sensitivity**, under *Touch Controls → Controller*, for each stick: a radial dead zone from 0% to 50% of the travel (0% leaves the game's own), past which the travel runs from rest to full again, scaled by a sensitivity from 0.1 to 3.0.
-- **Keyboard and Mouse**, with rebindable controls, mouse sensitivity and invert look. In play the mouse is captured as on a PC: no pointer on the screen, and the view keeps turning past the screen's edge.
+### Built-in Cheats
+Built directly into the in-game menu under **OPTIONS → CHEATS**:
+- **Weapons**: Infinite Ammo, Infinite Grenades, Rapid Fire (2x – 4x), No Recoil.
+- **Player**: God Mode, One-Hit Kill.
+- **Progression**: Unlock All Missions, Unlock Black Ops mode.
+- **Game Speed**: Adjustable gameplay speed from 25% to 200%.
 
-### General
-- **Language**: English, French, German, Italian or Spanish where the disc has them, plus Indonesian for the port's own text.
-- **Skip Intros** skips the intro logos.
-- **Audio Output**: automatic, mono, stereo or 5.1 surround.
-- **Check for Updates**: the app checks GitHub for a new release each time it opens. This button checks right away.
-- **Background Pause**: the game and its sound pause while the app is in the background.
+---
 
-### Cheats
-- **Weapons**: infinite ammo, infinite grenades, rapid fire (2x to 4x) and no recoil.
-- **Player**: god mode and one-hit kills.
-- **Game**: game speed from 25% to 200%.
+## Building from Source
 
-## System Requirements
-- **Android** 10 or newer, arm64.
-- **GPU** with a Vulkan 1.1 driver, for example Adreno 6xx or newer, Mali-G7x or newer, or Xclipse. Drivers without dynamic rendering or timeline semaphores are supported.
-- **Memory**: 4 GB.
-- **Storage**: 2 GB for the game files and saves.
+### iOS (macOS / GitHub Actions)
+1. Ensure Xcode 16+ is installed (`macos-15` runner).
+2. Run `tools/fetch_deps.sh` to download MoltenVK.
+3. Configure and build via CMake:
+   ```bash
+   cmake -B build-ios -G Xcode \
+     -DCMAKE_SYSTEM_NAME=iOS \
+     -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+     -DCMAKE_OSX_ARCHITECTURES=arm64
+   cmake --build build-ios --config Release --target Black
+   ```
 
-## Building
-Building requires a Windows PC.
+---
 
-### 1. Clone the repository
-```
-git clone https://github.com/RanggaCasper/Black-Android.git
-```
+## Credits & Acknowledgments
 
-### 2. Add the game files
-Put `default.xbe` from the USA release in `assets/`, or put the USA disc image (`.iso`) in `assets/` or `iso/`. The build extracts `default.xbe` from the image.
+- **[TGP482](https://github.com/TGP482/XboxXBE-Recomp)** — Developer of *XboxXBE-Recomp*, the ahead-of-time static recompiler and portable Xbox kernel runtime (Direct3D 8, XAudio/DSound, XAPI).
+- **[RanggaCasper](https://github.com/RanggaCasper/Black-Android)** — Developer of the Android native port, custom touch layout system, gyroscope integration, and UI overlays.
+- **[j1mb (Dayumm)](https://github.com/jimbon25/Black-iOS)** — iOS port development: Darwin Mach VM memory subsystem, Apple Silicon 16KB hardware page alignment, MoltenVK Metal backend integration, multi-thread GCD surface dispatch, edge-to-edge UI display, and packaging.
+- **[The Khronos Group](https://github.com/KhronosGroup/MoltenVK)** — MoltenVK Vulkan-to-Metal portability implementation.
+- **[libsdl-org (SDL3)](https://github.com/libsdl-org/SDL)** — Cross-platform windowing, UIKit backend, audio, and gamepad input.
+- **[Dear ImGui](https://github.com/ocornut/imgui)**, **[glslang](https://github.com/KhronosGroup/glslang)**, and **[toml++](https://github.com/marzer/tomlplusplus)**.
+- **Criterion Games & Electronic Arts** — Original creators of *BLACK (2006)*.
 
-### 3. Install the dependencies
-- [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*. The recompiler runs on the PC.
-- [Android Studio](https://developer.android.com/studio). In its SDK Manager, install Android SDK Platform 34, NDK `28.2.13676358` and CMake `3.31.6`.
-- [Python](https://www.python.org/), needed only to extract `default.xbe` from a disc image.
+---
 
-### 4. Build
-Run `build.bat`. It builds the recompiler, recompiles the xbe into `generated/game`, then builds `app/build/outputs/apk/release/app-release.apk` with Gradle. The first build compiles the whole game for arm64 and takes 30 to 90 minutes.
-
-Install the APK with:
-```
-adb install -r app/build/outputs/apk/release/app-release.apk
-```
-
-## Credits
-- [XboxXBE-Recomp](https://github.com/TGP482/XboxXBE-Recomp) by TGP482: the static recompiler and the portable runtime (Xbox kernel, XDK libraries and Direct3D 8) this port is built on.
-- [SDL](https://github.com/libsdl-org/SDL), [glslang](https://github.com/KhronosGroup/glslang), [toml++](https://github.com/marzer/tomlplusplus) and [Dear ImGui](https://github.com/ocornut/imgui).
-- [xemu](https://github.com/xemu-project/xemu) and [Cxbx-Reloaded](https://github.com/Cxbx-Reloaded/Cxbx-Reloaded), which XboxXBE-Recomp used as references for Xbox hardware and API behavior.
-
-*Black* is a trademark of its respective owners. This project is not affiliated with or endorsed by them.
+*BLACK is a registered trademark of Electronic Arts Inc. This project is a non-commercial, fan-made educational recompilation and is not affiliated with or endorsed by Electronic Arts or Microsoft.*

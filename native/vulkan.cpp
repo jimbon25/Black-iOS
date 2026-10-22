@@ -1205,24 +1205,12 @@ private:
 // ---- Init
 
 bool VulkanBackend::Init(uint32_t width, uint32_t height) {
-    LOGI("vulkan: Init guest %ux%u", width, height);
     guest_w_ = width;
     guest_h_ = height;
-    LOGI("vulkan: Init vkshader");
     vkshader::Init(app::ExeDir() / "shadercache");
-    LOGI("vulkan: calling CreateInstance");
-    if (!CreateInstance()) { LOGE("vulkan: CreateInstance failed"); return false; }
-    LOGI("vulkan: calling CreateSurface");
-    if (!CreateSurface()) { LOGE("vulkan: CreateSurface failed"); return false; }
-    LOGI("vulkan: calling PickDevice");
-    if (!PickDevice()) { LOGE("vulkan: PickDevice failed"); return false; }
-    LOGI("vulkan: calling CreateDevice");
-    if (!CreateDevice()) { LOGE("vulkan: CreateDevice failed"); return false; }
-    LOGI("vulkan: calling alloc_.Init");
+    if (!CreateInstance() || !CreateSurface() || !PickDevice() || !CreateDevice()) return false;
     alloc_.Init(pd_, dev_);
-    LOGI("vulkan: creating layouts, frames, swapchain");
     if (!CreateLayouts() || !CreateFrames() || !CreateSwapchain() || !CreateFixedImages()) return false;
-    LOGI("vulkan: Begin and InitUi");
     Begin();
     ui_ = InitUi();
     scale_ = app::RenderScale(guest_h_);
@@ -1238,26 +1226,18 @@ bool HasExtension(const std::vector<VkExtensionProperties>& list, const char* na
 bool VulkanBackend::CreateInstance() {
     uint32_t inst_ext_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, nullptr);
-    LOGI("vulkan: driver reports %u instance extensions", inst_ext_count);
     std::vector<VkExtensionProperties> inst_exts(inst_ext_count);
     if (inst_ext_count > 0) {
         vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, inst_exts.data());
-        for (const auto& e : inst_exts) {
-            LOGI("vulkan: available driver extension: %s", e.extensionName);
-        }
     }
 
     uint32_t n = 0;
     const char* const* sdl = SDL_Vulkan_GetInstanceExtensions(&n);
-    LOGI("vulkan: SDL requests %u extensions at %p", n, (const void*)sdl);
     std::vector<const char*> exts;
     if (sdl) {
         for (uint32_t i = 0; i < n; i++) {
             if (HasExtension(inst_exts, sdl[i])) {
-                LOGI("vulkan: enabling SDL extension: %s", sdl[i]);
                 exts.push_back(sdl[i]);
-            } else {
-                LOGI("vulkan: instance extension %s not in driver, skipping", sdl[i]);
             }
         }
     }
@@ -1280,7 +1260,6 @@ bool VulkanBackend::CreateInstance() {
     #define VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR 0x00000001
     #endif
     if (HasExtension(inst_exts, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
-        LOGI("vulkan: enabling portability enumeration");
         exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
         ci.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     }
@@ -1288,9 +1267,7 @@ bool VulkanBackend::CreateInstance() {
 
     ci.enabledExtensionCount = uint32_t(exts.size());
     ci.ppEnabledExtensionNames = exts.data();
-    LOGI("vulkan: calling vkCreateInstance with %u extensions", ci.enabledExtensionCount);
     VK_CHECK(vkCreateInstance(&ci, nullptr, &instance_));
-    LOGI("vulkan: vkCreateInstance success");
     return true;
 }
 
@@ -1320,14 +1297,10 @@ bool VulkanBackend::CreateSurface() {
         return false;
     }
 #endif
-    if (!host::Window()) {
-        LOGE("vulkan: host::Window() is null");
-        return false;
-    }
+    if (!host::Window()) return false;
     bool ok = false;
 #if defined(__APPLE__)
     if (!pthread_main_np()) {
-        LOGI("vulkan: dispatching CreateSurface to main thread");
         SurfaceTask t{host::Window(), instance_, &surface_, false};
         dispatch_sync_f(dispatch_get_main_queue(), &t, CreateSurfaceMain);
         ok = t.ok;
@@ -1342,7 +1315,6 @@ bool VulkanBackend::CreateSurface() {
         if (surface_failures_++ == 0) LOGE("vulkan: no surface: %s", SDL_GetError());
         return false;
     }
-    LOGI("vulkan: surface successfully created");
     if (surface_failures_) LOGI("vulkan: surface made after %u tries", surface_failures_ + 1);
     surface_failures_ = 0;
     surface_epoch_ = epoch;

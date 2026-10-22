@@ -106,9 +106,10 @@ set(IMGUI_SOURCES ${imgui_SOURCE_DIR}/imgui.cpp ${imgui_SOURCE_DIR}/imgui_draw.c
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
 
 if(IOS)
+    file(GLOB IOS_ICONS "${REPO}/native/ios/icons/*.png")
     add_executable(Black MACOSX_BUNDLE
                    ${RUNTIME_SOURCES} ${GAME_HOST_SOURCES} ${ANDROID_SOURCES} ${GEN_SOURCES} ${IMGUI_SOURCES}
-                   ${CMAKE_CURRENT_BINARY_DIR}/image_sha1.cpp)
+                   ${CMAKE_CURRENT_BINARY_DIR}/image_sha1.cpp ${IOS_ICONS})
     set_target_properties(Black PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_INFO_PLIST ${REPO}/native/ios/Info.plist
@@ -118,6 +119,7 @@ if(IOS)
         MACOSX_BUNDLE_BUNDLE_VERSION "1"
         XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
         XCODE_ATTRIBUTE_ENABLE_BITCODE "NO"
+        RESOURCE "${IOS_ICONS}"
     )
     set(TARGET_NAME Black)
 else()

@@ -301,15 +301,9 @@ void CreateBuffers(const PresentParams& p) {
 
 void EnsureBackend(uint32_t w, uint32_t h) {
     if (g_backend) return;
-    LOGI("d3d: creating GPU backend");
     g_backend = gpu::CreateBackend();
-    LOGI("d3d: backend->Init(%u, %u)", w, h);
     if (!g_backend->Init(w, h)) LOGE("d3d: renderer init failed");
-    LOGI("d3d: backend->Init finished");
-    if (kRenderThread) {
-        LOGI("d3d: creating threaded backend wrapper");
-        g_backend = gpu::CreateThreadedBackend(std::move(g_backend));
-    }
+    if (kRenderThread) g_backend = gpu::CreateThreadedBackend(std::move(g_backend));
 }
 
 // the device fields the recompiled getters read: targets, super sampling and depth scale
@@ -345,13 +339,9 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
          p.format, p.count, p.auto_depth, p.depth_format, p.interval, R32(pp + kPpFlags));
     std::memset(HostPtr(kDevice), 0, XDK_CDevice_Size);
     W32(kDevicePtr, kDevice);
-    LOGI("d3d: ScratchPush");
     ScratchPush();
-    LOGI("d3d: CreateBuffers");
     CreateBuffers(p);
-    LOGI("d3d: EnsureBackend");
     EnsureBackend(p.width, p.height);
-    LOGI("d3d: setting device state");
     g_state = gpu::State{};
     g_state.viewport = {0, 0, p.width, p.height, 0.0f, 1.0f};
     ApplyDeviceTargets();
@@ -360,7 +350,6 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     UpdateViewportConstants();
     ApplyDefaultStates(ctx);
     if (a[5]) W32(a[5], kDevice);
-    LOGI("d3d: CreateDevice complete");
     return 0;
 }
 

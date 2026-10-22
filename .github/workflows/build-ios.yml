@@ -96,6 +96,7 @@ jobs:
           
           mkdir -p build-ios/Payload
           cp -r build-ios/Release-iphoneos/Black.app build-ios/Payload/
+          cp native/ios/icons/*.png build-ios/Payload/Black.app/ || true
           cd build-ios && zip -r -9 "$IPA_NAME" Payload/
           echo "Created $IPA_NAME ($(stat -f %z "$IPA_NAME") bytes)"
 

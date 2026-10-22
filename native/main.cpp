@@ -436,19 +436,15 @@ int main(int, char**) {
         return 1;
     }
 
-    LOGI("app: FindGame completed, initializing UI");
     InitUi();
-    LOGI("app: InitUi completed, initializing input");
     input::Init();
     if (app::kGame.window) app::kGame.window(g_window);
-    LOGI("app: booting kernel with xbe");
     if (!kernel::Boot(std::move(game.xbe), IMAGE_XBE, game.dir.string(), (app::ExeDir() / "hdd").string())) {
         LOGE("app: kernel::Boot failed");
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, Utf8(app::kGame.short_title).c_str(),
                                  "The game failed to start, see the log in the logs folder.", g_window);
         return 1;
     }
-    LOGI("app: kernel::Boot succeeded, entering event loop");
 
     for (;;) {
         SDL_Event e;
