@@ -59,8 +59,7 @@ void LogToLogcat() {
         std::string line;
         for (ssize_t n; (n = read(fd, buf, sizeof(buf))) > 0;) {
             line.append(buf, size_t(n));
-            for (size_t nl; (nl = line.find('
-')) != std::string::npos; line.erase(0, nl + 1))
+            for (size_t nl; (nl = line.find('\n')) != std::string::npos; line.erase(0, nl + 1))
                 __android_log_write(ANDROID_LOG_INFO, "BLACK", line.substr(0, nl).c_str());
         }
     }).detach();
