@@ -16,6 +16,16 @@
 extern const char kImageSha1[];  // the xbe recompiled into this library, written by CMake
 
 // src/common/europe.patch, EUROPE_PATCH as CMake names it
+#if defined(__APPLE__)
+__asm__(".section __TEXT,__const\n"
+        ".global _kEuropePatch\n"
+        ".global _kEuropePatchEnd\n"
+        ".balign 16\n"
+        "_kEuropePatch:\n"
+        ".incbin \"" EUROPE_PATCH "\"\n"
+        "_kEuropePatchEnd:\n"
+        ".text\n");
+#else
 __asm__(".section .rodata\n"
         ".global kEuropePatch\n"
         ".global kEuropePatchEnd\n"
@@ -24,6 +34,7 @@ __asm__(".section .rodata\n"
         ".incbin \"" EUROPE_PATCH "\"\n"
         "kEuropePatchEnd:\n"
         ".previous\n");
+#endif
 extern "C" const uint8_t kEuropePatch[];
 extern "C" const uint8_t kEuropePatchEnd[];
 
