@@ -167,7 +167,7 @@ if(IOS)
         "-framework AudioToolbox"
         "-framework AVFoundation"
     )
-    target_link_options(Black PRIVATE -Wl,-dead_strip)
+    target_link_options(Black PRIVATE -Wl,-dead_strip -Wl,-U,_OBJC_CLASS_$_MTLResidencySetDescriptor)
 else()
     target_link_libraries(main PRIVATE SDL3::SDL3 tomlplusplus::tomlplusplus glslang glslang-default-resource-limits
                           vulkan android log)
