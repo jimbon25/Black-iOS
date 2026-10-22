@@ -146,14 +146,11 @@ if(IOS)
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/MoltenVK/include
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/frameworks/MoltenVK.xcframework/ios-arm64/Headers
     )
-    find_library(MOLTENVK_LIB NAMES MoltenVK PATHS
-                 ${CMAKE_CURRENT_SOURCE_DIR}/third_party/frameworks/MoltenVK.xcframework/ios-arm64
-                 ${CMAKE_CURRENT_SOURCE_DIR}/third_party/MoltenVK/MoltenVK.xcframework/ios-arm64)
-    if(MOLTENVK_LIB)
-        target_link_libraries(Black PRIVATE ${MOLTENVK_LIB})
-    else()
-        target_link_libraries(Black PRIVATE "-framework MoltenVK")
+    set(MOLTENVK_LIB ${CMAKE_CURRENT_SOURCE_DIR}/third_party/frameworks/MoltenVK.xcframework/ios-arm64/libMoltenVK.a)
+    if(NOT EXISTS ${MOLTENVK_LIB})
+        message(FATAL_ERROR "Missing MoltenVK static library: ${MOLTENVK_LIB}")
     endif()
+    target_link_libraries(Black PRIVATE ${MOLTENVK_LIB})
     target_link_libraries(Black PRIVATE
         $<IF:$<TARGET_EXISTS:SDL3::SDL3-static>,SDL3::SDL3-static,SDL3::SDL3>
         tomlplusplus::tomlplusplus
