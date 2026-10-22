@@ -1224,8 +1224,20 @@ bool VulkanBackend::CreateInstance() {
     ai.pApplicationName = app::kGame.log;
     ai.pEngineName = "XboxXBE-Recomp";
     ai.apiVersion = std::min<uint32_t>(loader, VK_API_VERSION_1_3);
+#if defined(__APPLE__)
+    #ifndef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+    #define VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME "VK_KHR_portability_enumeration"
+    #endif
+    #ifndef VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
+    #define VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR 0x00000001
+    #endif
+    exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
     VkInstanceCreateInfo ci{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     ci.pApplicationInfo = &ai;
+#if defined(__APPLE__)
+    ci.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
     ci.enabledExtensionCount = uint32_t(exts.size());
     ci.ppEnabledExtensionNames = exts.data();
     VK_CHECK(vkCreateInstance(&ci, nullptr, &instance_));
@@ -1237,11 +1249,13 @@ bool VulkanBackend::CreateSurface() {
     uint32_t epoch = host::SurfaceEpoch();
     // Android has not handed the window back yet (resuming, or a surface change): wait for it without asking SDL,
     // which only fails, and log the outage once, not every present
+#ifdef __ANDROID__
     SDL_PropertiesID props = SDL_GetWindowProperties(host::Window());
     if (!SDL_GetPointerProperty(props, SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, nullptr)) {
         if (surface_failures_++ == 0) LOGI("vulkan: waiting for Android's window");
         return false;
     }
+#endif
     if (!SDL_Vulkan_CreateSurface(host::Window(), instance_, nullptr, &surface_)) {
         surface_ = VK_NULL_HANDLE;
         if (surface_failures_++ == 0) LOGE("vulkan: no surface: %s", SDL_GetError());
@@ -1301,6 +1315,9 @@ bool VulkanBackend::PickDevice() {
             auto want = [&](const char* name) {
                 if (HasExtension(ext, name)) dev_exts_.push_back(name);
             };
+#if defined(__APPLE__)
+            want("VK_KHR_portability_subset");
+#endif
             if (api < VK_API_VERSION_1_3) {
                 want(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
                 want(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);

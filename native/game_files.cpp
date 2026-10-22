@@ -35,11 +35,10 @@ namespace fs = std::filesystem;
 
 // the shared storage's folder for the game, readable with all files access: the files or the image in it, or in its
 // assets folder
+#ifdef __ANDROID__
 constexpr const char* kShared = "/storage/emulated/0/Black";
 constexpr const char* kVolumes = "/storage";
 
-// the Black folder on each SD card or USB stick Android has mounted, /storage/<volume id>/Black; all files access
-// reads them as it does the phone's own storage
 std::vector<fs::path> RemovableFolders() {
     std::vector<fs::path> out;
     std::error_code ec;
@@ -51,17 +50,25 @@ std::vector<fs::path> RemovableFolders() {
     std::sort(out.begin(), out.end());
     return out;
 }
+#endif
 
 std::vector<fs::path> AssetFolders() {
-    std::vector<fs::path> out = {fs::path(kShared), fs::path(kShared) / "assets"};
+    std::vector<fs::path> out;
+#ifdef __ANDROID__
+    out.push_back(fs::path(kShared));
+    out.push_back(fs::path(kShared) / "assets");
     for (const fs::path& card : RemovableFolders()) {
         out.push_back(card);
         out.push_back(card / "assets");
     }
+#elif defined(__APPLE__)
+    out.push_back(ExeDir());
+    out.push_back(ExeDir() / "Black");
+    out.push_back(ExeDir() / "Black" / "assets");
+#endif
     out.push_back(ExeDir() / "assets");
     return out;
 }
-
 std::string Sha1(const std::vector<uint8_t>& data) {
     alignas(8) uint8_t ctx[128];
     uint8_t digest[20];

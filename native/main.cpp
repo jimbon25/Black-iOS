@@ -2,8 +2,10 @@
 // by app::kGame (src/common/game_info.cpp)
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#ifdef __ANDROID__
 #include <android/log.h>
 #include <sys/system_properties.h>
+#endif
 #include <unistd.h>
 
 #include <algorithm>
@@ -47,6 +49,7 @@ std::string Utf8(const wchar_t* w) {
 
 // the log's lines to logcat as well: stderr is read on a thread of its own
 void LogToLogcat() {
+#ifdef __ANDROID__
     int fds[2];
     if (pipe(fds)) return;
     dup2(fds[1], STDERR_FILENO);
@@ -56,17 +59,21 @@ void LogToLogcat() {
         std::string line;
         for (ssize_t n; (n = read(fd, buf, sizeof(buf))) > 0;) {
             line.append(buf, size_t(n));
-            for (size_t nl; (nl = line.find('\n')) != std::string::npos; line.erase(0, nl + 1))
+            for (size_t nl; (nl = line.find('
+')) != std::string::npos; line.erase(0, nl + 1))
                 __android_log_write(ANDROID_LOG_INFO, "BLACK", line.substr(0, nl).c_str());
         }
     }).detach();
+#endif
 }
 
+#ifdef __ANDROID__
 std::string Property(const char* name) {
     char v[PROP_VALUE_MAX] = {};
     __system_property_get(name, v);
     return v;
 }
+#endif
 
 void SetForeground(bool on) {
     {
@@ -216,9 +223,13 @@ void LogSystem() {
     std::strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
     LOGR("%ls (%s), %s, build %s", kGame.title, IMAGE_XBE, date, BLACK_COMMIT);
     LOGR("Path: %s", ExeDir().c_str());
+#ifdef __ANDROID__
     LOGR("Device: %s %s, Android %s (API %d)", Property("ro.product.manufacturer").c_str(),
          Property("ro.product.model").c_str(), Property("ro.build.version.release").c_str(), SDL_GetAndroidSDKVersion());
     LOGR("CPU: %s (%d threads)", Property("ro.soc.model").c_str(), SDL_GetNumLogicalCPUCores());
+#elif defined(__APPLE__)
+    LOGR("Platform: Apple iOS (%d threads)", SDL_GetNumLogicalCPUCores());
+#endif
     LOGR("RAM: %.1f GB", SDL_GetSystemRAM() / 1024.0);
     Mode desk = Desktop();
     LOGR("Display: %ux%u, %.0f Hz", desk.width, desk.height, RefreshRate());
@@ -248,9 +259,28 @@ float RenderScale(uint32_t guest_height) {
 std::filesystem::path ExeDir() {
     static const std::filesystem::path dir = [] {
         const char* p = nullptr;
+#ifdef __ANDROID__
         if (SDL_GetAndroidExternalStorageState() & SDL_ANDROID_EXTERNAL_STORAGE_WRITE) p = SDL_GetAndroidExternalStoragePath();
         if (!p) p = SDL_GetAndroidInternalStoragePath();
         return std::filesystem::path(p ? p : ".");
+#elif defined(__APPLE__)
+        const char* home = getenv("HOME");
+        if (home) {
+            std::filesystem::path docs = std::filesystem::path(home) / "Documents";
+            std::error_code ec;
+            std::filesystem::create_directories(docs, ec);
+            return docs;
+        }
+        char* pref = SDL_GetPrefPath("", "Black");
+        if (pref) {
+            std::filesystem::path res(pref);
+            SDL_free(pref);
+            return res;
+        }
+        return std::filesystem::path(".");
+#else
+        return std::filesystem::path(".");
+#endif
     }();
     return dir;
 }
@@ -299,7 +329,11 @@ void InitUi() {
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_IsTouchScreen;
+    #ifdef __APPLE__
+    io.BackendPlatformName = "ios_sdl3";
+#else
     io.BackendPlatformName = "android_sdl3";
+#endif
 }
 
 void Dispatch(const SDL_Event& e) {
@@ -343,7 +377,12 @@ int main(int, char**) {
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
     SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO | SDL_INIT_SENSOR)) {
+        #ifdef __ANDROID__
         __android_log_print(ANDROID_LOG_ERROR, "BLACK", "SDL_Init: %s", SDL_GetError());
+#else
+        fprintf(stderr, "SDL_Init: %s
+", SDL_GetError());
+#endif
         return 1;
     }
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);

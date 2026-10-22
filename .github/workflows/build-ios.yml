@@ -1,0 +1,113 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [main, feat/*]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Build Tools
+        run: |
+          brew install cmake ninja
+
+      - name: Fetch Dependencies (MoltenVK)
+        run: |
+          chmod +x tools/fetch_deps.sh
+          ./tools/fetch_deps.sh
+
+      - name: Decrypt default.xbe
+        env:
+          XBE_KEY: ${{ secrets.XBE_KEY }}
+        run: |
+          mkdir -p assets
+          if [ -n "$XBE_KEY" ] && [ -f ci/default.xbe.enc ]; then
+            key="$RUNNER_TEMP/xbe.key"
+            printf '%s' "$XBE_KEY" > "$key"
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in ci/default.xbe.enc -out assets/default.xbe -pass "file:$key"
+            rm -f "$key"
+            sha1sum assets/default.xbe
+          elif [ -f assets/default.xbe ]; then
+            echo "Using existing assets/default.xbe"
+          else
+            echo "Warning: assets/default.xbe not available; checking for generated code..."
+          fi
+
+      - name: Build Recompiler & Recompile XBE (if needed)
+        run: |
+          if [ ! -f generated/game/x86_func_mapping.cpp ]; then
+            if [ -f assets/default.xbe ]; then
+              echo "Building recompiler tool..."
+              cmake -S tools -B out/tools -G Ninja -DCMAKE_BUILD_TYPE=Release
+              cmake --build out/tools
+              echo "Running xbe_recomp..."
+              SDK_DIR=$(cat out/tools/sdk_dir.txt)
+              ./out/tools/xbe_recomp config/game.toml --xdk "$SDK_DIR/xdk"
+            else
+              echo "::error::Both generated/game and assets/default.xbe are missing! Set XBE_KEY secret to enable compilation."
+              exit 1
+            fi
+          fi
+
+      - name: Configure CMake for iOS
+        run: |
+          cmake -B build-ios -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO \
+            -DCMAKE_IOS_INSTALL_COMBINED=YES
+
+      - name: Build Black iOS Target
+        run: |
+          cmake --build build-ios --config Release --target Black -- -sdk iphoneos
+
+      - name: Package Unsigned IPA
+        id: package
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            NAME="${GITHUB_REF_NAME#v}"
+          else
+            NAME="1.5.0-${GITHUB_SHA::7}"
+          fi
+          echo "version=$NAME" >> "$GITHUB_OUTPUT"
+          
+          IPA_NAME="Black-${NAME}.ipa"
+          echo "ipa_name=$IPA_NAME" >> "$GITHUB_OUTPUT"
+          
+          mkdir -p build-ios/Payload
+          cp -r build-ios/Release-iphoneos/Black.app build-ios/Payload/
+          cd build-ios && zip -r -9 "$IPA_NAME" Payload/
+          echo "Created $IPA_NAME ($(stat -f %z "$IPA_NAME") bytes)"
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.ipa_name }}
+          path: build-ios/${{ steps.package.outputs.ipa_name }}
+          if-no-files-found: error
+
+      - name: Release to GitHub
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Black for iOS ${{ github.ref_name }}
+          files: build-ios/${{ steps.package.outputs.ipa_name }}
+          generate_release_notes: true
+          make_latest: true

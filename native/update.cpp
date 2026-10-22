@@ -1,12 +1,14 @@
-// The options menu's update check: BlackActivity asks GitHub and shows the answer in a dialog of its own
+// The options menu's update check
+#ifdef __ANDROID__
 #include <jni.h>
+#endif
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_system.h>
 
 namespace host {
 
-// a no-argument void method of the activity; any thread, SDL attaches it to the VM
+#ifdef __ANDROID__
 static void CallActivity(const char* name) {
     auto* env = static_cast<JNIEnv*>(SDL_GetAndroidJNIEnv());
     auto activity = static_cast<jobject>(SDL_GetAndroidActivity());
@@ -20,5 +22,8 @@ static void CallActivity(const char* name) {
 }
 
 void CheckForUpdates() { CallActivity("checkForUpdates"); }
+#else
+void CheckForUpdates() {}
+#endif
 
 }  // namespace host
