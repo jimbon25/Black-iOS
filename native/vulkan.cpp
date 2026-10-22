@@ -973,6 +973,7 @@ public:
         ramp_dirty_ = true;
     }
     void WaitGpuFrame(uint64_t n);
+    void WaitIdle() { if (dev_) vkDeviceWaitIdle(dev_); }
 
 private:
     struct Frame {
@@ -1042,7 +1043,6 @@ private:
     uint64_t Completed();
     VkFence SubmitFence(uint64_t value);
     void PollFences();
-    void WaitIdle() { if (dev_) vkDeviceWaitIdle(dev_); }
     void ResetFrame(Frame& f);
     void Transition(Image& im, VkImageLayout to);
     void BeginRender(Image* color, Image* depth);
@@ -2858,7 +2858,7 @@ void VulkanBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t
     EnsureVertexShader(s, a, sh);
 
     DrawTextures stages;
-    if (!BindStageTextures(s, stages) || !draw_rt_ && !draw_ds_) return;
+    if (!BindStageTextures(s, stages) || (!draw_rt_ && !draw_ds_)) return;
     PixelKey pk = MakePixelKey(s, stages.info);
     sh.pkey = Hash(&pk, sizeof(pk));
     EnsurePixelShader(pk, sh);
