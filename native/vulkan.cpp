@@ -1104,6 +1104,7 @@ private:
     VkInstance instance_ = VK_NULL_HANDLE;
     VkSurfaceKHR surface_ = VK_NULL_HANDLE;
     uint32_t surface_epoch_ = 0;
+    uint32_t resume_epoch_ = 0;
     VkPhysicalDevice pd_ = VK_NULL_HANDLE;
     VkPhysicalDeviceProperties props_{};
     VkPhysicalDeviceFeatures feats_{};
@@ -3123,6 +3124,10 @@ void VulkanBackend::RecordLate(uint32_t data) {
 // window is new, lost, or could not be made last time. false: nothing to show on, the frame is dropped
 bool VulkanBackend::AcquireImage(uint32_t& index) {
     if (!host::Foreground()) return false;
+    if (resume_epoch_ != host::ResumeEpoch()) {
+        resume_epoch_ = host::ResumeEpoch();
+        swap_stale_ = true;
+    }
     if (!surface_ || surface_lost_ || host::SurfaceEpoch() != surface_epoch_) {
         if (surface_) LOGI("vulkan: new surface (%s)", surface_lost_ ? "lost" : "new window");
         DestroySwapchain();

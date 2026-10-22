@@ -40,6 +40,7 @@ namespace {
 SDL_Window* g_window = nullptr;
 std::atomic<bool> g_foreground{true};
 std::atomic<uint32_t> g_surface_epoch{0};
+std::atomic<uint32_t> g_resume_epoch{0};
 std::mutex g_foreground_lock;
 std::condition_variable g_foreground_cv;
 
@@ -79,7 +80,11 @@ std::string Property(const char* name) {
 void SetForeground(bool on) {
     {
         std::lock_guard lock(g_foreground_lock);
+#ifdef __ANDROID__
         if (on && !g_foreground) g_surface_epoch++;
+#else
+        if (on && !g_foreground) g_resume_epoch++;
+#endif
         g_foreground = on;
     }
     g_foreground_cv.notify_all();
@@ -112,6 +117,7 @@ namespace host {
 SDL_Window* Window() { return g_window; }
 bool Foreground() { return g_foreground; }
 uint32_t SurfaceEpoch() { return g_surface_epoch; }
+uint32_t ResumeEpoch() { return g_resume_epoch; }
 
 void WaitForeground() {
     std::unique_lock lock(g_foreground_lock);
