@@ -157,6 +157,7 @@ if(IOS)
         glslang glslang-default-resource-limits
         "-framework Metal"
         "-framework MetalKit"
+        "-framework IOSurface"
         "-framework UIKit"
         "-framework Foundation"
         "-framework QuartzCore"
