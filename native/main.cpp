@@ -78,26 +78,24 @@ std::string Property(const char* name) {
 
 void SetForeground(bool on) {
     if (!on) {
-        {
-            std::lock_guard lock(g_foreground_lock);
-            g_foreground.store(false, std::memory_order_release);
-        }
+        bool was_on = g_foreground.exchange(false, std::memory_order_acq_rel);
+        if (!was_on) return;
         // App is losing active focus (Control Center, Notification Center, or switching to background).
         // Wait for any GPU work currently being processed to complete cleanly before iOS halts execution.
-        // On iOS, submitting Metal command buffers while in background causes MTLCommandBufferErrorNotPermitted,
-        // which destroys the Vulkan physical device permanently.
         gpu::WaitIdle();
-        LOGI("app: in the background (gpu idle)");
+        LOGI("app: backgrounded (gpu idle)");
     } else {
+        bool was_on = g_foreground.exchange(true, std::memory_order_acq_rel);
+        if (was_on) return;
+#ifdef __ANDROID__
+        g_surface_epoch++;
+#endif
+        gpu::Resume();
         {
             std::lock_guard lock(g_foreground_lock);
-#ifdef __ANDROID__
-            if (!g_foreground) g_surface_epoch++;
-#endif
-            g_foreground.store(true, std::memory_order_release);
         }
         g_foreground_cv.notify_all();
-        LOGI("app: in front");
+        LOGI("app: foregrounded (resumed)");
     }
 }
 
@@ -353,6 +351,27 @@ void InitUi() {
 #endif
 }
 
+static bool SDLCALL AppLifecycleWatcher(void*, SDL_Event* event) {
+    switch (event->type) {
+        case SDL_EVENT_WILL_ENTER_BACKGROUND:
+        case SDL_EVENT_DID_ENTER_BACKGROUND:
+        case SDL_EVENT_WINDOW_MINIMIZED:
+        case SDL_EVENT_WINDOW_OCCLUDED:
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+            SetForeground(false);
+            break;
+        case SDL_EVENT_WILL_ENTER_FOREGROUND:
+        case SDL_EVENT_DID_ENTER_FOREGROUND:
+        case SDL_EVENT_WINDOW_RESTORED:
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            SetForeground(true);
+            break;
+        default:
+            break;
+    }
+    return true;
+}
+
 void Dispatch(const SDL_Event& e) {
     switch (e.type) {
         case SDL_EVENT_QUIT:
@@ -435,6 +454,7 @@ int main(int, char**) {
         return 1;
     }
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
+    SDL_AddEventWatch(AppLifecycleWatcher, nullptr);
     app::Load();
     if (app::kGame.init) app::kGame.init();
     app::LogSystem();

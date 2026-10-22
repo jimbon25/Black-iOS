@@ -973,7 +973,13 @@ public:
         ramp_dirty_ = true;
     }
     void WaitGpuFrame(uint64_t n);
-    void WaitIdle() { if (dev_) vkDeviceWaitIdle(dev_); }
+    void WaitIdle() {
+        if (dev_) {
+            VkResult r = vkDeviceWaitIdle(dev_);
+            if (r != VK_SUCCESS) LOGE("vulkan: WaitIdle error (%d)", int(r));
+        }
+    }
+    void Resume() { swap_stale_ = true; }
 
 private:
     struct Frame {
@@ -3401,6 +3407,10 @@ void WaitGpuFrame(uint64_t n) {
 
 void WaitIdle() {
     if (g_vulkan) g_vulkan->WaitIdle();
+}
+
+void Resume() {
+    if (g_vulkan) g_vulkan->Resume();
 }
 
 }  // namespace gpu

@@ -25,6 +25,7 @@ void WindowPixels(int& w, int& h);
 
 namespace gpu {
 void WaitIdle();
+void Resume();
 }
 
 // controllers through SDL (input.cpp): the main thread hands over their plug events

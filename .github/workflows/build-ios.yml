@@ -87,7 +87,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             NAME="${GITHUB_REF_NAME#v}"
           else
-            NAME="1.5.3-${GITHUB_SHA::7}"
+            NAME="1.5.4-${GITHUB_SHA::7}"
           fi
           echo "version=$NAME" >> "$GITHUB_OUTPUT"
           
