@@ -380,8 +380,7 @@ int main(int, char**) {
         #ifdef __ANDROID__
         __android_log_print(ANDROID_LOG_ERROR, "BLACK", "SDL_Init: %s", SDL_GetError());
 #else
-        fprintf(stderr, "SDL_Init: %s
-", SDL_GetError());
+        fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
 #endif
         return 1;
     }
