@@ -8,6 +8,7 @@
 #endif
 #include <unistd.h>
 #include <csignal>
+#include <exception>
 
 #include <algorithm>
 #include <atomic>
@@ -374,9 +375,27 @@ static void CrashHandler(int sig, siginfo_t* info, void*) {
     _Exit(128 + sig);
 }
 
+static void TerminateHandler() {
+    std::exception_ptr p = std::current_exception();
+    if (p) {
+        try {
+            std::rethrow_exception(p);
+        } catch (const std::exception& e) {
+            LOGE("CRASH: unhandled std::exception: %s", e.what());
+        } catch (...) {
+            LOGE("CRASH: unhandled non-std exception");
+        }
+    } else {
+        LOGE("CRASH: std::terminate called without active exception");
+    }
+    logx::Flush();
+    _Exit(1);
+}
+
 }  // namespace
 
 int main(int, char**) {
+    std::set_terminate(TerminateHandler);
     struct sigaction sa{};
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = CrashHandler;
