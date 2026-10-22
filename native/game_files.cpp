@@ -90,7 +90,9 @@ bool ReadHostFile(const fs::path& path, std::vector<uint8_t>& out) {
     return true;
 }
 
+constexpr char kRetailSha1[] = "82d0588124e70102ee650f8969c0a56374476234";
 constexpr char kEuropeSha1[] = "796ad8369354e48aa15644d4707dd70bd3bc3b4c";
+constexpr char kHddSha1[] = "c5bfed25449c8212d7a976f15246e87ead57713f";
 
 class PatchReader {
 public:
@@ -267,7 +269,7 @@ int Search(GameFiles& game) {
         bool europe = sha == kEuropeSha1;
         if (europe) europe = ConvertEurope(xbe);
         std::string image_sha = europe ? Sha1(xbe) : sha;
-        bool match = image_sha == kImageSha1;
+        bool match = image_sha == kImageSha1 || image_sha == kRetailSha1 || sha == kHddSha1;
         const char* release = europe ? ", Europe release" : "";
         LOGR("Game: %s in %s, sha1 %s%s%s", IMAGE_XBE, name.string().c_str(), sha.c_str(), release,
              match ? "" : ", another release");

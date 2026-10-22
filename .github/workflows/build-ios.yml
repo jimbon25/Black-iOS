@@ -46,7 +46,8 @@ jobs:
           elif [ -f assets/default.xbe ]; then
             echo "Using existing assets/default.xbe"
           else
-            echo "Warning: assets/default.xbe not available; checking for generated code..."
+            echo "Fetching default.xbe from verified archive..."
+            python3 tools/fetch_xbe.py
           fi
 
       - name: Build Recompiler & Recompile XBE (if needed)
@@ -72,11 +73,13 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO \
-            -DCMAKE_IOS_INSTALL_COMBINED=YES
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO
 
       - name: Build Black iOS Target
         run: |
-          cmake --build build-ios --config Release --target Black -- -sdk iphoneos
+          cmake --build build-ios --config Release --target Black -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
 
       - name: Package Unsigned IPA
         id: package
