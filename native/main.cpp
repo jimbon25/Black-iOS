@@ -7,6 +7,7 @@
 #include <sys/system_properties.h>
 #endif
 #include <unistd.h>
+#include <csignal>
 
 #include <algorithm>
 #include <atomic>
@@ -367,8 +368,6 @@ void Dispatch(const SDL_Event& e) {
     ui::OnEvent(e);
 }
 
-#include <csignal>
-
 static void CrashHandler(int sig, siginfo_t* info, void*) {
     LOGE("CRASH: caught signal %d at %p", sig, info ? info->si_addr : nullptr);
     logx::Flush();
@@ -381,11 +380,11 @@ int main(int, char**) {
     struct sigaction sa{};
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = CrashHandler;
-    sigaction(SIGSEGV, &sa, nullptr);
-    sigaction(SIGBUS, &sa, nullptr);
-    sigaction(SIGABRT, &sa, nullptr);
-    sigaction(SIGILL, &sa, nullptr);
-    sigaction(SIGFPE, &sa, nullptr);
+    ::sigaction(SIGSEGV, &sa, nullptr);
+    ::sigaction(SIGBUS, &sa, nullptr);
+    ::sigaction(SIGABRT, &sa, nullptr);
+    ::sigaction(SIGILL, &sa, nullptr);
+    ::sigaction(SIGFPE, &sa, nullptr);
 
     LogToLogcat();
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
