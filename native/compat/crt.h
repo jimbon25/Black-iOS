@@ -18,4 +18,6 @@ static inline int safe_pthread_attr_setstacksize(pthread_attr_t* attr, size_t si
     return pthread_attr_setstacksize(attr, size);
 }
 #define pthread_attr_setstacksize(attr, size) safe_pthread_attr_setstacksize(attr, size)
+// Override SDK's __declspec(dllexport) for iOS (not needed, symbols visible by default)
+#define X86_HOST_API
 #endif
