@@ -12,6 +12,7 @@
 #include "common/aspect.h"
 #include "common/options.h"
 #include "game/layout.h"
+#include "game/cheats.h"
 #include "xdk/d3d8.h"
 #include "xdk/hle.h"
 
@@ -205,6 +206,10 @@ X86_EXTERN_FUNC(__imp__sub_000D3740);
 X86_FUNC(sub_000D3740) {
     g_anchor = kOff;
     g_inset = 0;
+    
+    // Draw ESP lines before HUD render ends
+    game::DrawEspLines();
+    
     __imp__sub_000D3740(ctx, base);
 }
 

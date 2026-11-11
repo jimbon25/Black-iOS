@@ -233,7 +233,8 @@ enum RowId { kRenderResolution, kMaxFps, kVsync, kFpsCounter, kAniso, kReloadBlu
              kFmvScale, kGyro, kGyroSensitivity, kTouchLayout, kTouchOpacity, kTouchSize, kTouchEdit,
              kInfiniteAmmo, kRapidFire, kNoRecoil, kGameSpeed, kGodMode, kOneHitKill, kInfiniteGrenades,
              kCheckUpdates, kTouchSensitivity, kLeftDeadzone, kRightDeadzone, kLeftSensitivity, kRightSensitivity,
-             kScreenFilter, kGyroInvertX, kGyroInvertY, kUnlockLevels, kUnlockBlackOps };
+             kScreenFilter, kGyroInvertX, kGyroInvertY, kUnlockLevels, kUnlockBlackOps, kWeaponSuppressor, kFillMedkit,
+             kEspEnabled, kAimbotStrength };
 
 using rows::Kind;
 using rows::Row;
@@ -294,9 +295,14 @@ constexpr Row kCheatRows[] = {
     {Kind::Value, kInfiniteGrenades, "INFINITE GRENADES"},
     {Kind::Value, kRapidFire, "RAPID FIRE"},
     {Kind::Value, kNoRecoil, "NO RECOIL"},
+    {Kind::Value, kWeaponSuppressor, "WEAPON SUPPRESSOR"},
     {Kind::Heading, -1, "PLAYER"},
     {Kind::Value, kGodMode, "GOD MODE"},
     {Kind::Value, kOneHitKill, "ONE-HIT KILL"},
+    {Kind::Value, kFillMedkit, "FILL MEDKIT"},
+    {Kind::Heading, -1, "VISION"},
+    {Kind::Value, kEspEnabled, "ESP WALLHACK"},
+    {Kind::Value, kAimbotStrength, "AIMBOT STRENGTH"},
     {Kind::Heading, -1, "GAME"},
     {Kind::Value, kGameSpeed, "GAME SPEED"},
     {Kind::Value, kUnlockLevels, "UNLOCK ALL MISSIONS"},
@@ -336,6 +342,9 @@ bool* ToggleFlag(Settings& s, int id) {
         case kInfiniteGrenades: return &o.infinite_grenades;
         case kUnlockLevels: return &o.unlock_levels;
         case kUnlockBlackOps: return &o.unlock_black_ops;
+        case kWeaponSuppressor: return &o.weapon_suppressor;
+        case kFillMedkit: return &o.fill_medkit;
+        case kEspEnabled: return &o.esp_enabled;
         default: return nullptr;
     }
 }
@@ -417,6 +426,12 @@ bool StepCheatRow(int id, int step, char (&text)[64]) {
             // 25% to 200% in steps of 25
             if (step) o.game_speed = uint32_t(StepRange(int(o.game_speed), 25, 200, 25, step));
             std::snprintf(text, sizeof(text), o.game_speed == 100 ? "%u%% (DEFAULT)" : "%u%%", o.game_speed);
+            return true;
+        case kAimbotStrength:
+            // 0 to 100% in steps of 5, 0 = off
+            if (step) o.aimbot_strength = uint32_t(StepRange(int(o.aimbot_strength), 0, 100, 5, step));
+            if (o.aimbot_strength == 0) std::snprintf(text, sizeof(text), "OFF");
+            else std::snprintf(text, sizeof(text), "%u%%", o.aimbot_strength);
             return true;
         default:
             return false;
@@ -571,6 +586,10 @@ void RestoreDefaults(int page) {
         o.infinite_grenades = none.infinite_grenades;
         o.unlock_levels = none.unlock_levels;
         o.unlock_black_ops = none.unlock_black_ops;
+        o.weapon_suppressor = none.weapon_suppressor;
+        o.fill_medkit = none.fill_medkit;
+        o.esp_enabled = none.esp_enabled;
+        o.aimbot_strength = none.aimbot_strength;
         Changed();
         return;
     }
@@ -600,6 +619,10 @@ void RestoreDefaults(int page) {
     o.infinite_grenades = keep.infinite_grenades;
     o.unlock_levels = keep.unlock_levels;
     o.unlock_black_ops = keep.unlock_black_ops;
+    o.weapon_suppressor = keep.weapon_suppressor;
+    o.fill_medkit = keep.fill_medkit;
+    o.esp_enabled = keep.esp_enabled;
+    o.aimbot_strength = keep.aimbot_strength;
     Changed();
 }
 

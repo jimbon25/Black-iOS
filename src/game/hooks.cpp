@@ -9,6 +9,7 @@
 #include "common/options.h"
 #include "core/input.h"
 #include "game/layout.h"
+#include "game/cheats.h"
 #include "xdk/d3d8.h"
 #include "xdk/hle.h"
 #include "xdk/layout.h"
@@ -133,6 +134,9 @@ X86_FUNC(sub_000BE3F0) {
     float dt = FrameTime();
     G<float>(t + kTimerDt) = dt / std::max(R32(t + kTimerDivisor), 1u);
     G<float>(t + kTimerTime) = time + float((steps() - before) * dt);
+    
+    // ESP & Aimbot enemy tracking update
+    game::UpdateEnemyList();
 }
 
 // frame throttle: sleeps that gave the console's one CPU to the loader
@@ -148,6 +152,9 @@ void MenuTick(X86Context& ctx, uint8_t*) {
     last = now;
     ctx.eax = uint32_t(carry);
     carry -= float(ctx.eax);
+    
+    // ESP & Aimbot enemy tracking update
+    game::UpdateEnemyList();
 }
 
 // what a step made once a frame at 30 becomes over the real frame: factor to the power of this

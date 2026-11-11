@@ -13,6 +13,7 @@
 #include "core/log.h"
 #include "game/flash.h"
 #include "game/layout.h"
+#include "game/cheats.h"
 #include "xdk/hle.h"
 
 using namespace kernel;
@@ -42,6 +43,13 @@ void MouseLook(X86Context& ctx, uint8_t*) {
     float scale = kDegrees * ctx.xmm[2].f[0];
     G<float>(ctx.esi + kControllerYaw) -= std::remainder(dx * scale, 360.0f);
     G<float>(ctx.esi + kControllerPitch) += dy * scale;
+    
+    // Apply aimbot if enabled
+    float yaw = G<float>(ctx.esi + kControllerYaw);
+    float pitch = G<float>(ctx.esi + kControllerPitch);
+    game::ApplyAimbot(yaw, pitch);
+    G<float>(ctx.esi + kControllerYaw) = yaw;
+    G<float>(ctx.esi + kControllerPitch) = pitch;
 }
 
 // false with the keyboard or mouse used last: no pull of the view to a target, no shots bent to one
