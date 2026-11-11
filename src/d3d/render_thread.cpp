@@ -21,6 +21,7 @@
 #include "gpu/backend.h"
 #include "kernel/kernel.h"
 #include "kernel/memory.h"
+#include "common/options.h"
 
 namespace gpu {
 
@@ -199,6 +200,27 @@ public:
 
     void Present(const Surface& front) override {
         auto t = Clock::now();
+        
+        // Dynamic resolution scaling based on frame time
+        static auto last_frame = Clock::now();
+        if (game::Opt().dynamic_resolution) {
+            auto now = Clock::now();
+            float frame_ms = std::chrono::duration<float, std::milli>(now - last_frame).count();
+            last_frame = now;
+            
+            constexpr float target_ms = 16.6f;  // 60 FPS target
+            constexpr float min_scale = 0.5f;
+            constexpr float max_scale = 1.0f;
+            
+            static float current_scale = 1.0f;
+            if (frame_ms > target_ms * 1.2f) {
+                current_scale = std::max(min_scale, current_scale - 0.05f);
+            } else if (frame_ms < target_ms * 0.9f) {
+                current_scale = std::min(max_scale, current_scale + 0.02f);
+            }
+            // ponytail: actual render scale injection deferred to backend Init/Resize
+        }
+        
         Cmd c{Op::Present};
         c.s1 = front;
         c.s1.header = Header(front.header);

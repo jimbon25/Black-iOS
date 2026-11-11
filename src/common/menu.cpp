@@ -234,7 +234,7 @@ enum RowId { kRenderResolution, kMaxFps, kVsync, kFpsCounter, kAniso, kReloadBlu
              kInfiniteAmmo, kRapidFire, kNoRecoil, kGameSpeed, kGodMode, kOneHitKill, kInfiniteGrenades,
              kCheckUpdates, kTouchSensitivity, kLeftDeadzone, kRightDeadzone, kLeftSensitivity, kRightSensitivity,
              kScreenFilter, kGyroInvertX, kGyroInvertY, kUnlockLevels, kUnlockBlackOps, kWeaponSuppressor, kFillMedkit,
-             kEspEnabled, kAimbotStrength };
+             kEspEnabled, kAimbotStrength, kDynamicResolution };
 
 using rows::Kind;
 using rows::Row;
@@ -305,6 +305,7 @@ constexpr Row kCheatRows[] = {
     {Kind::Value, kAimbotStrength, "AIMBOT STRENGTH"},
     {Kind::Heading, -1, "GAME"},
     {Kind::Value, kGameSpeed, "GAME SPEED"},
+    {Kind::Value, kDynamicResolution, "DYNAMIC RESOLUTION"},
     {Kind::Value, kUnlockLevels, "UNLOCK ALL MISSIONS"},
     {Kind::Value, kUnlockBlackOps, "UNLOCK BLACK OPS"},
 };
@@ -345,6 +346,7 @@ bool* ToggleFlag(Settings& s, int id) {
         case kWeaponSuppressor: return &o.weapon_suppressor;
         case kFillMedkit: return &o.fill_medkit;
         case kEspEnabled: return &o.esp_enabled;
+        case kDynamicResolution: return &o.dynamic_resolution;
         default: return nullptr;
     }
 }
@@ -590,6 +592,7 @@ void RestoreDefaults(int page) {
         o.fill_medkit = none.fill_medkit;
         o.esp_enabled = none.esp_enabled;
         o.aimbot_strength = none.aimbot_strength;
+        o.dynamic_resolution = none.dynamic_resolution;
         Changed();
         return;
     }
@@ -623,6 +626,7 @@ void RestoreDefaults(int page) {
     o.fill_medkit = keep.fill_medkit;
     o.esp_enabled = keep.esp_enabled;
     o.aimbot_strength = keep.aimbot_strength;
+    o.dynamic_resolution = keep.dynamic_resolution;
     Changed();
 }
 

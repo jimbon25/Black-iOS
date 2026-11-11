@@ -48,6 +48,7 @@ struct Options {
     bool fill_medkit = false;  // cheat: instant full health refill
     bool esp_enabled = false;  // cheat: draw lines from player to enemies through walls
     uint32_t aimbot_strength = 0;  // cheat: auto-aim strength, 0 off, 1-100 targeting assist
+    bool dynamic_resolution = false;  // adaptive render scale for framerate target
     std::map<std::string, std::string> keys;  // action id to key names, absent is the default
 };
 Options& Opt();
