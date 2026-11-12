@@ -18,5 +18,5 @@ static inline int safe_pthread_attr_setstacksize(pthread_attr_t* attr, size_t si
     return pthread_attr_setstacksize(attr, size);
 }
 #define pthread_attr_setstacksize(attr, size) safe_pthread_attr_setstacksize(attr, size)
-#define X86_WEAK_FUNC(name, alias) __attribute__((weak)) extern void* alias
+#define X86_WEAK_FUNC(name, alias) __attribute__((weak)) void* name __asm__(#alias)
 #endif
