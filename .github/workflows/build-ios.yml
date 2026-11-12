@@ -32,6 +32,11 @@ jobs:
           chmod +x tools/fetch_deps.sh
           ./tools/fetch_deps.sh
 
+      - name: Workaround Git Submodule Auth
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global credential.helper ""
+
       - name: Decrypt default.xbe
         env:
           XBE_KEY: ${{ secrets.XBE_KEY }}
