@@ -121,6 +121,8 @@ if(IOS)
         XCODE_ATTRIBUTE_ENABLE_BITCODE "NO"
         RESOURCE "${IOS_ICONS}"
     )
+    # Enable MS extensions for __declspec in SDK headers (x86_ops.h, x86_recomp_shared.h)
+    target_compile_options(Black PRIVATE -fms-extensions)
     set(TARGET_NAME Black)
 else()
     add_library(main SHARED ${RUNTIME_SOURCES} ${GAME_HOST_SOURCES} ${ANDROID_SOURCES} ${GEN_SOURCES} ${IMGUI_SOURCES}
